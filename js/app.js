@@ -211,7 +211,6 @@ function startApp() {
     const favorites = JSON.parse(localStorage.getItem("favorites")) ?? [];
 
     if (favorites.length) {
-      console.log("Si hay Favoritos");
       showResult(favorites);
     } else {
       const noFavorites = document.createElement("P");
