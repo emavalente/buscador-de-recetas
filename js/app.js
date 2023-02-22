@@ -1,16 +1,24 @@
 document.addEventListener("DOMContentLoaded", startApp);
 
 function startApp() {
-  const selectCategorias = document.querySelector("#categorias");
-  selectCategorias.addEventListener("change", selectCategorie);
+  const selectCategories = document.querySelector("#categorias");
 
+  if (selectCategories) {
+    selectCategories.addEventListener("change", selectCategorie);
+
+    // Comienza la app trayendo las categorías.
+    getCategories();
+  }
+
+  const favoritesDiv = document.querySelector(".favoritos");
   const result = document.querySelector("#resultado");
+
+  if (favoritesDiv) {
+    // Revisar favoritos
+    getFavorites();
+  }
+
   const modal = new bootstrap.Modal("#modal", {});
-
-  const favorites = [];
-
-  // Comienza la app trayendo las categorías.
-  getCategories();
 
   // Elegir una categoría.
 
@@ -30,7 +38,7 @@ function startApp() {
       const option = document.createElement("OPTION");
       option.value = item.strCategory;
       option.innerText = item.strCategory;
-      selectCategorias.appendChild(option);
+      selectCategories.appendChild(option);
     });
   }
 
@@ -61,22 +69,22 @@ function startApp() {
 
       const mealPicture = document.createElement("IMG");
       mealPicture.classList.add("card-img-top");
-      mealPicture.alt = `Picture of the meal ${strMeal}`;
-      mealPicture.src = strMealThumb;
+      mealPicture.alt = `Picture of the meal ${strMeal ?? meal.title}`;
+      mealPicture.src = strMealThumb ?? meal.img;
 
       const mealCardBody = document.createElement("DIV");
       mealCardBody.classList.add("card-body");
 
       const mealHeading = document.createElement("H3");
       mealHeading.classList.add("card-title", "mb-3");
-      mealHeading.textContent = strMeal;
+      mealHeading.textContent = strMeal ?? meal.title;
 
       const mealButton = document.createElement("BUTTON");
       mealButton.classList.add("btn", "btn-danger", "w-100");
       mealButton.textContent = "Ver Receta";
       mealButton.dataset.bsTarget = "#modal";
       mealButton.dataset.bsToogle = "modal";
-      mealButton.addEventListener("click", () => selectRecipe(idMeal));
+      mealButton.addEventListener("click", () => selectRecipe(idMeal ?? meal.id));
 
       // Inyectar el HTML
       mealsDiv.appendChild(mealCard);
@@ -142,9 +150,24 @@ function startApp() {
 
     const btnFavorite = document.createElement("BUTTON");
     btnFavorite.classList.add("btn", "btn-danger", "col");
-    btnFavorite.textContent = "Guardar Favorito";
+    btnFavorite.textContent = storageExist(idMeal) ? "Eliminar Favorito" : "Guardar Favorito";
     btnFavorite.addEventListener("click", () => {
-      addFavorite(idMeal);
+      if (storageExist(idMeal)) {
+        deleteFavorite(idMeal);
+        btnFavorite.textContent = "Guardar Favorito";
+        showToast("Eliminado de favoritos");
+        return;
+      }
+
+      addFavorite({
+        id: idMeal,
+        title: strMeal,
+        img: strMealThumb,
+      });
+
+      btnFavorite.textContent = "Eliminar Favorito";
+
+      showToast("Receta agregagada a favoritos");
     });
 
     const btnClose = document.createElement("BUTTON");
@@ -160,15 +183,41 @@ function startApp() {
     modal.show();
   }
 
-  function addFavorite(id) {
-    const exist = favorites.some((el) => el === id);
-    if (exist) {
-      console.log("El id ya existe en favoritos");
-      return;
-    } else {
-      favorites.push(id);
-    }
+  function addFavorite(recipe) {
+    const favorites = JSON.parse(localStorage.getItem("favorites")) ?? [];
+    localStorage.setItem("favorites", JSON.stringify([...favorites, recipe]));
+  }
 
-    console.log(favorites);
+  function storageExist(id) {
+    const favorites = JSON.parse(localStorage.getItem("favorites")) ?? [];
+    return favorites.some((el) => el.id === id);
+  }
+
+  function deleteFavorite(id) {
+    const favorites = JSON.parse(localStorage.getItem("favorites")) ?? [];
+    const newFavorites = favorites.filter((el) => el.id !== id);
+    localStorage.setItem("favorites", JSON.stringify(newFavorites));
+  }
+
+  function showToast(message) {
+    const toastDiv = document.querySelector("#toast");
+    const toastBody = document.querySelector(".toast-body");
+    const toast = new bootstrap.Toast(toastDiv);
+    toastBody.textContent = message;
+    toast.show();
+  }
+
+  function getFavorites() {
+    const favorites = JSON.parse(localStorage.getItem("favorites")) ?? [];
+
+    if (favorites.length) {
+      console.log("Si hay Favoritos");
+      showResult(favorites);
+    } else {
+      const noFavorites = document.createElement("P");
+      noFavorites.classList.add("fs-2", "text-center", "fw-bold", "my-5");
+      noFavorites.textContent = "No hay favoritos";
+      result.appendChild(noFavorites);
+    }
   }
 }
